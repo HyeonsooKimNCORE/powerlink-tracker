@@ -1,0 +1,41 @@
+name: 파워링크 순위 체크
+
+on:
+  schedule:
+    # UTC 기준 시간입니다. 한국시간(KST)은 UTC+9 이므로
+    # 아래는 한국시간 오전 9시, 오후 1시, 오후 6시에 실행됩니다.
+    - cron: "0 0,4,9 * * *"
+  workflow_dispatch:
+    # 이걸 넣어두면 깃허브 화면에서 "지금 바로 실행" 버튼도 쓸 수 있어요.
+
+permissions:
+  contents: write
+
+jobs:
+  check-rank:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 필요한 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 순위 체크 실행
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python tracker.py
+
+      - name: 순위 기록 저장 (다음번 비교를 위해)
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add powerlink_rank.db
+          git commit -m "순위 기록 업데이트" || echo "변경사항 없음, 넘어감"
+          git push
